@@ -1,0 +1,27 @@
+nvidia-pyindex
+onnx
+onnxruntime-gpu --index-url https://pypi.ngc.nvidia.com
+onnx_graphsurgeon
+polygraphy
+cuda-python
+opencv-python-headless==3.4.16.59
+colored
+scipy
+
+dtale==2.2.0
+graphviz
+ipyfilechooser
+ipywidgets
+jupyter
+jupyter-dash
+jupyterlab
+netron
+openpyxl # for excel reporting
+pandas==1.1.5
+plotly
+protobuf==3.16.0
+qgrid
+pytest
+setuptools # for qgrid
+wheel # for qgrid
+

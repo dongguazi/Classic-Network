@@ -108,9 +108,10 @@ class Resnet(nn.Module):
         # 每个layer的第一层需要把上一级输出维度变成我当前的基准维度，然后重复基准维度和输出维度不变
         #例如当前我的基准是我的基准256，来自上一层是512，把它变成1024，然后后面的Resblock都只需要【1024-256-1024】的重复过程
         
-        #下面两种if判断的条件是等价的
-        #if stride!=1 or self.in_channels!=planes*Resblock.expansion:
+
         if complex==True:
+            #下面两种if判断的条件是等价的
+            #if stride!=1 or self.in_channels!=planes*Resblock.expansion:
             if stride!=1 or self.first==False:
                 self.first=True
                 downsample=nn.Sequential(nn.Conv2d(self.in_channels,planes*Resblock.expansion,kernel_size=1,stride=stride),
