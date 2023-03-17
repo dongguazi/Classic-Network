@@ -3,19 +3,20 @@ import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
 from torchsummary import summary
-
+# import tensorrt as trt
+ 
 class Bottleneck(nn.Module):
     expansion=4
-    def __init__(self,in_channels,out_channels,groups=1,width_per_group=64,down_sample=None,stride=1):
+    def __init__(self,in_channels,out_channels,down_sample=None,stride=1,groups=1,width_per_group=64):
         super(Bottleneck,self).__init__()
-        width=int(out_channels*(width_per_group/64.))*groups
-        self.conv1=nn.Conv2d(in_channels,width,kernel_size=1,stride=1,padding=0  )
-        self.bn1=nn.BatchNorm2d(width)
+        self.width = int( out_channels * (width_per_group / 64.)) * groups
+        self.conv1=nn.Conv2d(in_channels,self.width,kernel_size=1,stride=1,padding=0  )
+        self.bn1=nn.BatchNorm2d(self.width)
 
-        self.conv2=nn.Conv2d(width,width,kernel_size=3,stride=stride,padding=1,bias=False, groups=groups )
-        self.bn2=nn.BatchNorm2d(width)
+        self.conv2=nn.Conv2d(self.width,self.width,kernel_size=3,stride=stride,padding=1,bias=False, groups=groups )
+        self.bn2=nn.BatchNorm2d(self.width)
 
-        self.conv3=nn.Conv2d(width,out_channels*self.expansion,kernel_size=1,stride=1,padding=0  )
+        self.conv3=nn.Conv2d(self.width,out_channels*self.expansion,kernel_size=1,stride=1,padding=0  )
         self.bn3=nn.BatchNorm2d(out_channels*self.expansion)
 
         self.down_sample=down_sample
@@ -24,13 +25,11 @@ class Bottleneck(nn.Module):
     
     def forward(self,x):
         identity=x.clone()
-        if self.down_sample:
-           identity=self.down_sample(identity)
-
         x=self.relu(self.bn1(self.conv1(x)))
         x=self.relu(self.bn2(self.conv2(x)))
         x=self.bn3(self.conv3(x))
-        
+        if self.down_sample:
+           identity=self.down_sample(identity)
         # print(x.shape)
         # print(identity.shape)
         x+=identity
@@ -99,9 +98,9 @@ class Resnext(nn.Module):
         x=self.layer3(x)
         x=self.layer4(x)
         x=self.avgpooling(x)
-        # print("x.shape")
-        # print(x.shape)
-        # self.cout+=1
+        # # print("x.shape")
+        # # print(x.shape)
+        # # self.cout+=1
         x=x.reshape(x.shape[0],-1)
         print(x.shape)
         x=self.fc (x)
@@ -117,21 +116,22 @@ class Resnext(nn.Module):
         
         if complex==True:
             #下面两种if判断的条件是等价的
-            #if stride!=1 or self.in_channels!=planes*Resblock.expansion:
-            if stride!=1 or self.first==False:
+            if stride!=1 or self.in_channels!=planes*Resblock.expansion:
+            #if stride!=1 or self.first==False:
                 self.first=True
                 downsample=nn.Sequential(nn.Conv2d(self.in_channels,planes*Resblock.expansion,kernel_size=1,stride=stride),
                 nn.BatchNorm2d(planes*Resblock.expansion))
-            layers.append(Resblock(self.in_channels,planes,downsample,stride=stride))
+            layers.append(Resblock(self.in_channels,planes,downsample,stride=stride,groups=self.groups,width_per_group=self.width_per_group))
             self.in_channels=planes*Resblock.expansion
         else:
             downsample=nn.Sequential(nn.Conv2d(self.in_channels,planes*Resblock.expansion,kernel_size=1,stride=stride),
             nn.BatchNorm2d(planes*Resblock.expansion))
-            layers.append(Resblock(self.in_channels,planes,downsample,stride=stride))
-            self.in_channels=planes*Resblock.expansion
 
+            layers.append(Resblock(self.in_channels,planes,downsample,stride=stride,groups=self.groups,width_per_group=self.width_per_group))
+            self.in_channels=planes*Resblock.expansion
+        #in_channels,out_channels,down_sample=None,stride=1,groups=1,width_per_group=64
         for i in range(block_nums-1):
-             layers.append(Resblock(self.in_channels,planes))
+             layers.append(Resblock(self.in_channels,planes,down_sample=None,stride=1,groups=self.groups,width_per_group=self.width_per_group))
         return nn.Sequential(*layers)
 
 
@@ -200,13 +200,15 @@ def Resnext50_32x4d(num_classes=10,channels=3):
 def Resnext101_32x8d(num_classes=10,channels=3):
     layer_list=[3,4,23,3]
     groups = 32
-    width_per_group = 4
+    width_per_group = 8
     return  Resnext(Bottleneck,layer_list,num_classes,channels,groups=groups,width_per_group=width_per_group)  
 
 
 if __name__ =="__main__":
     input=torch.ones([2,3,224,224])
-    model=Resnext50_32x4d(10)
+    # model=Resnext50_32x4d(10)
+    model=Resnext101_32x8d(10)
+
     # res=model(input)
     # print(res.shape)
     summary(model.to("cuda"),(3,224,224))

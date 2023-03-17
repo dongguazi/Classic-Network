@@ -111,8 +111,8 @@ class Resnet(nn.Module):
 
         if complex==True:
             #下面两种if判断的条件是等价的
-            #if stride!=1 or self.in_channels!=planes*Resblock.expansion:
-            if stride!=1 or self.first==False:
+            if stride!=1 or self.in_channels!=planes*Resblock.expansion:
+            #if stride!=1 or self.first==False:
                 self.first=True
                 downsample=nn.Sequential(nn.Conv2d(self.in_channels,planes*Resblock.expansion,kernel_size=1,stride=stride),
                 nn.BatchNorm2d(planes*Resblock.expansion))
@@ -206,7 +206,7 @@ def Resnet152(num_classes,channels=3):
 
 if __name__ =="__main__":
     input=torch.ones([2,3,224,224])
-    model=Resnet18(10)
+    model=Resnet50(10)
     # res=model(input)
     # print(res.shape)
     summary(model.to("cuda"),(3,224,224))

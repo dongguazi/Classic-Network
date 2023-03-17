@@ -1,5 +1,5 @@
-#pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple onnx
-
+#pip install -r requirements.txt 
+#pip install -i https://pypi.tuna.tsinghua.edu.cn/simple onnx
 nvidia-pyindex
 onnx
 onnxruntime-gpu --index-url https://pypi.ngc.nvidia.com
