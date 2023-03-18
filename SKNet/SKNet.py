@@ -5,10 +5,10 @@ import torch.nn.functional as F
 import numpy as np
 from torchsummary import summary
 
-
+  # SeNet get form ResNext :only modify the SELayer,other is the same . 
 class SELayer(nn.Module):
     def __init__(self,channel,reduction=16) -> None:
-        super(SELayer,self).__init__()
+        super(SKLayer,self).__init__()
         self.globalAvgPool=nn.AdaptiveAvgPool2d(1)
         self.fc=nn.Sequential(
             nn.Linear(channel,channel//reduction,bias=False),
@@ -22,11 +22,42 @@ class SELayer(nn.Module):
         x=self.globalAvgPool(x).view(b,c)
         x=self.fc(x).view(b,c,1,1)
         return  original_x*x
-   
-class SEBlock(nn.Module):
+ 
+ #new version, 
+class SKLayer(nn.Module):
+    def __init__(self,in_channels,stride=1,groups=32,M=2,r=16,L=32) -> None:
+        super(SKLayer,self).__init__()
+        d=max(in_channels/r,32)
+        self.M=M
+        self.in_channels=in_channels
+        self.convs=nn.ModuleList([])
+        for i in range(M):
+            self.convs.append(nn.Sequential(
+                nn.Conv2d(in_channels,in_channels,stride=stride,padding=i+1,dilation=i+1,groups=groups,bias=False),
+                nn.BatchNorm2d(in_channels),
+                nn.ReLU(inplace=True)
+            ))
+        self.gap=nn.AdaptiveAvgPool2d((1,1))
+        self.fc=nn.Sequential(
+            nn.Conv2d(in_channels,d,kernel_size=1,stride=1,bias=False),
+            nn.BatchNorm2d(d),
+            nn.ReLU()            
+            )
+        self.fcs=nn.ModuleList([])
+        for i in range(M):
+            self.fcs.append(
+                nn.conv2d(d,in_channels,kernel_size=1,stride=1)
+            )
+        self.softmax=nn.Softmax(dim=1)
+                
+    def forward(self,x):
+        pass
+
+ #new version, 
+class SKBlock(nn.Module):
     expansion=4
     def __init__(self,in_channels,plane,down_sample=None,stride=1,reduction=16):
-        super(SEBlock,self).__init__()
+        super(SKBlock,self).__init__()
         #inception
         self.conv1=nn.Conv2d(in_channels,plane,kernel_size=1,stride=1,padding=0  )
         self.bn1=nn.BatchNorm2d(plane)
@@ -37,7 +68,7 @@ class SEBlock(nn.Module):
         self.conv3=nn.Conv2d(plane,plane*self.expansion,kernel_size=1,stride=1,padding=0  )
         self.bn3=nn.BatchNorm2d(plane*self.expansion)
         self.relu=nn.ReLU()
-        self.se=SELayer(plane*self.expansion,reduction)
+        self.se=SKLayer(plane*self.expansion,reduction)
    
         self.down_sample=down_sample
         self.stride=stride
@@ -56,89 +87,6 @@ class SEBlock(nn.Module):
         x=self.relu(x)
         return x
 
-# SeNet get form ResNet :only modify the Bottleneck,other is the same .
-class Bottleneck(nn.Module):
-    expansion=4
-    def __init__(self,in_channels,plane,down_sample=None,stride=1):
-        super(Bottleneck,self).__init__()
-        #inception
-        self.conv1=nn.Conv2d(in_channels,plane,kernel_size=1,stride=1,padding=0  )
-        self.bn1=nn.BatchNorm2d(plane)
-
-        self.conv2=nn.Conv2d(plane,plane,kernel_size=3,stride=stride,padding=1  )
-        self.bn2=nn.BatchNorm2d(plane)
-
-        self.conv3=nn.Conv2d(plane,plane*self.expansion,kernel_size=1,stride=1,padding=0  )
-        self.bn3=nn.BatchNorm2d(plane*self.expansion)
-        self.relu=nn.ReLU()
-        self.globalAvgPool=nn.AdaptiveAvgPool2d(1)
-        # if plane==64:
-        #     self.globalAvgPool=nn.AvgPool2d(56,stride=1)
-        # elif plane==128:
-        #     self.globalAvgPool=nn.AvgPool2d(28,stride=1)
-        # elif plane==256:
-        #     self.globalAvgPool=nn.AvgPool2d(14,stride=1)
-        # elif plane==512:
-        #     self.globalAvgPool=nn.AvgPool2d(7,stride=1)
-        
-        self.fc1=nn.Linear(in_features=plane*self.expansion,out_features=round(plane/self.expansion))
-        self.fc2=nn.Linear(in_features=round(plane/self.expansion),out_features=round(plane*self.expansion))
-        self.sigmoid=nn.Sigmoid()
-
-        self.down_sample=down_sample
-        self.stride=stride
-    
-    def forward(self,x):
-        identity=x.clone()
-        #inception
-        x=self.relu(self.bn1(self.conv1(x)))
-        x=self.relu(self.bn2(self.conv2(x)))
-        x=self.bn3(self.conv3(x))
-        if self.down_sample:
-            identity=self.down_sample(identity)
-        #se 
-        original_x=x
-        x=self.globalAvgPool(x)
-        x=x.view(x.size(0),-1)
-        x=self.fc1(x)
-        x=self.relu(x)
-        x=self.fc2(x)
-        x=self.sigmoid(x)
-        x=x.view(x.size(0),x.size(1),1,1)
-        x=x*original_x
-        
-        x+=identity
-        x=self.relu(x)
-        return x
-
-
-class PlainBlock(nn.Module):
-    expansion=1
-    def __init__(self,in_channels,out_channels,down_sample=None,stride=1) -> None:
-        super(PlainBlock,self).__init__()
-        self.conv1=nn.Conv2d(in_channels,out_channels,kernel_size=3,stride=stride,padding=1,bias=False  )
-        self.bn1=nn.BatchNorm2d(out_channels)
-
-        self.conv2=nn.Conv2d(out_channels,out_channels,kernel_size=3,stride=stride,padding=1,bias=False  )
-        self.bn2=nn.BatchNorm2d(out_channels)
-
-        self.down_sample=down_sample
-        self.stride=stride
-        self.relu=nn.ReLU()
-    
-    def forward(self,x):
-        identity=x.clone()
-        x=self.relu(self.bn1(self.conv1(x)))
-        x=self.bn2(self.conv2(x))
-
-        if self.down_sample:
-            identity=self.down_sample(identity)
-        print(x.shape)
-        print(identity.shape)
-        x+=identity
-        x=self.relu(x)
-
-        return x
 
 class SeNet(nn.Module):
     first=False
@@ -206,20 +154,20 @@ class SeNet(nn.Module):
 
 
 
-def SeNet50(num_classes,channels=3):
+def SKNet50(num_classes,channels=3):
     layer_list=[3,4,6,3]
-    return  SeNet(SEBlock,layer_list,num_classes,channels)  
+    return  SeNet(SKBlock,layer_list,num_classes,channels)  
     # return  SeNet(Bottleneck,layer_list,num_classes,channels)  
 
  
 
-def SeNet101(num_classes,channels=3):
+def SKNet101(num_classes,channels=3):
     layer_list=[3,4,23,3]
-    return  SeNet(Bottleneck,layer_list,num_classes,channels)  
+    return  SeNet(SKBlock,layer_list,num_classes,channels)  
 
-def SeNet152(num_classes,channels=3):
+def SKNet152(num_classes,channels=3):
     layer_list=[3,4,36,3]
-    return  SeNet(Bottleneck,layer_list,num_classes,channels)  
+    return  SeNet(SKBlock,layer_list,num_classes,channels)  
 
 if __name__ =="__main__":
     input=torch.ones([2,3,224,224])
