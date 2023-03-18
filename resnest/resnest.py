@@ -8,17 +8,17 @@ from torchsummary import summary
 
 class Bottleneck(nn.Module):
     expansion=4
-    def __init__(self,in_channels,plain,down_sample=None,stride=1,groups=1,width_per_group=64):
+    def __init__(self,in_channels,out_channels,down_sample=None,stride=1,groups=1,width_per_group=64):
         super(Bottleneck,self).__init__()
-        self.width = int( plain * (width_per_group / 64.)) * groups
+        self.width = int( out_channels * (width_per_group / 64.)) * groups
         self.conv1=nn.Conv2d(in_channels,self.width,kernel_size=1,stride=1,padding=0  )
         self.bn1=nn.BatchNorm2d(self.width)
 
         self.conv2=nn.Conv2d(self.width,self.width,kernel_size=3,stride=stride,padding=1,bias=False, groups=groups )
         self.bn2=nn.BatchNorm2d(self.width)
 
-        self.conv3=nn.Conv2d(self.width,plain*self.expansion,kernel_size=1,stride=1,padding=0  )
-        self.bn3=nn.BatchNorm2d(plain*self.expansion)
+        self.conv3=nn.Conv2d(self.width,out_channels*self.expansion,kernel_size=1,stride=1,padding=0  )
+        self.bn3=nn.BatchNorm2d(out_channels*self.expansion)
 
         self.down_sample=down_sample
         self.stride=stride
@@ -40,13 +40,13 @@ class Bottleneck(nn.Module):
 
 class PlainBlock(nn.Module):
     expansion=1
-    def __init__(self,in_channels,plane,down_sample=None,stride=1) -> None:
+    def __init__(self,in_channels,out_channels,down_sample=None,stride=1) -> None:
         super(PlainBlock,self).__init__()
-        self.conv1=nn.Conv2d(in_channels,plane,kernel_size=3,stride=stride,padding=1,bias=False  )
-        self.bn1=nn.BatchNorm2d(plane)
+        self.conv1=nn.Conv2d(in_channels,out_channels,kernel_size=3,stride=stride,padding=1,bias=False  )
+        self.bn1=nn.BatchNorm2d(out_channels)
 
-        self.conv2=nn.Conv2d(plane,plane,kernel_size=3,stride=stride,padding=1,bias=False  )
-        self.bn2=nn.BatchNorm2d(plane)
+        self.conv2=nn.Conv2d(out_channels,out_channels,kernel_size=3,stride=stride,padding=1,bias=False  )
+        self.bn2=nn.BatchNorm2d(out_channels)
 
         self.down_sample=down_sample
         self.stride=stride
@@ -79,10 +79,10 @@ class Resnext(nn.Module):
         self.bn1=nn.BatchNorm2d(self.in_channels)
         self.relu=nn.ReLU(inplace=True)
         self.maxpooling=nn.MaxPool2d(kernel_size=3,stride=2,padding=1)
-        self.layer1=self.make_layer(block,layer_list[0],plane=64,stride=1)
-        self.layer2=self.make_layer(block,layer_list[1],plane=128,stride=2 if complex==True else 1)
-        self.layer3=self.make_layer(block,layer_list[2],plane=256,stride=2 if complex==True else 1)
-        self.layer4=self.make_layer(block,layer_list[3],plane=512,stride=2 if complex==True else 1)
+        self.layer1=self.make_layer(block,layer_list[0],planes=64,stride=1)
+        self.layer2=self.make_layer(block,layer_list[1],planes=128,stride=2 if complex==True else 1)
+        self.layer3=self.make_layer(block,layer_list[2],planes=256,stride=2 if complex==True else 1)
+        self.layer4=self.make_layer(block,layer_list[3],planes=512,stride=2 if complex==True else 1)
         
         self.avgpooling=nn.AdaptiveAvgPool2d((1,1))
         self.fc=nn.Linear(block.expansion*512,num_classes)
@@ -107,7 +107,7 @@ class Resnext(nn.Module):
         x=self.fc (x)
         return x
      #
-    def make_layer(self,Resblock,block_nums,plane,stride=1):
+    def make_layer(self,Resblock,block_nums,planes,stride=1):
         downsample=None
         layers=[]
         #stride!=1说明输入通道要降维，对上一层来的图片大小，缩放一倍
@@ -117,22 +117,22 @@ class Resnext(nn.Module):
         
         if complex==True:
             #下面两种if判断的条件是等价的
-            if stride!=1 or self.in_channels!=plane*Resblock.expansion:
+            if stride!=1 or self.in_channels!=planes*Resblock.expansion:
             #if stride!=1 or self.first==False:
                 self.first=True
-                downsample=nn.Sequential(nn.Conv2d(self.in_channels,plane*Resblock.expansion,kernel_size=1,stride=stride),
-                nn.BatchNorm2d(plane*Resblock.expansion))
-            layers.append(Resblock(self.in_channels,plane,downsample,stride=stride,groups=self.groups,width_per_group=self.width_per_group))
-            self.in_channels=plane*Resblock.expansion
+                downsample=nn.Sequential(nn.Conv2d(self.in_channels,planes*Resblock.expansion,kernel_size=1,stride=stride),
+                nn.BatchNorm2d(planes*Resblock.expansion))
+            layers.append(Resblock(self.in_channels,planes,downsample,stride=stride,groups=self.groups,width_per_group=self.width_per_group))
+            self.in_channels=planes*Resblock.expansion
         else:
-            downsample=nn.Sequential(nn.Conv2d(self.in_channels,plane*Resblock.expansion,kernel_size=1,stride=stride),
-            nn.BatchNorm2d(plane*Resblock.expansion))
+            downsample=nn.Sequential(nn.Conv2d(self.in_channels,planes*Resblock.expansion,kernel_size=1,stride=stride),
+            nn.BatchNorm2d(planes*Resblock.expansion))
 
-            layers.append(Resblock(self.in_channels,plane,downsample,stride=stride,groups=self.groups,width_per_group=self.width_per_group))
-            self.in_channels=plane*Resblock.expansion
+            layers.append(Resblock(self.in_channels,planes,downsample,stride=stride,groups=self.groups,width_per_group=self.width_per_group))
+            self.in_channels=planes*Resblock.expansion
         #in_channels,out_channels,down_sample=None,stride=1,groups=1,width_per_group=64
         for i in range(block_nums-1):
-             layers.append(Resblock(self.in_channels,plane,down_sample=None,stride=1,groups=self.groups,width_per_group=self.width_per_group))
+             layers.append(Resblock(self.in_channels,planes,down_sample=None,stride=1,groups=self.groups,width_per_group=self.width_per_group))
         return nn.Sequential(*layers)
 
 

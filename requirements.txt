@@ -7,8 +7,8 @@ onnx_graphsurgeon
 polygraphy
 cuda-python
 opencv-python-headless==3.4.16.59
-colored
-scipy
+# colored
+# scipy
 
 dtale==2.2.0
 graphviz
