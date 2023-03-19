@@ -6,10 +6,10 @@ import numpy as np
 from torchsummary import summary
 
 
-class Bottleneck(nn.Module):
+class ResNeXtBlock(nn.Module):
     expansion=4
     def __init__(self,in_channels,plain,down_sample=None,stride=1,groups=1,width_per_group=64):
-        super(Bottleneck,self).__init__()
+        super(ResNeXtBlock,self).__init__()
         self.width = int( plain * (width_per_group / 64.)) * groups
         self.conv1=nn.Conv2d(in_channels,self.width,kernel_size=1,stride=1,padding=0  )
         self.bn1=nn.BatchNorm2d(self.width)
@@ -196,13 +196,13 @@ def Resnext50_32x4d(num_classes=10,channels=3):
     layer_list=[3,4,6,3]
     groups = 32
     width_per_group = 4
-    return  Resnext(Bottleneck,layer_list,num_classes,channels,groups=groups,width_per_group=width_per_group)  
+    return  Resnext(ResNeXtBlock,layer_list,num_classes,channels,groups=groups,width_per_group=width_per_group)  
 
 def Resnext101_32x8d(num_classes=10,channels=3):
     layer_list=[3,4,23,3]
     groups = 32
     width_per_group = 8
-    return  Resnext(Bottleneck,layer_list,num_classes,channels,groups=groups,width_per_group=width_per_group)  
+    return  Resnext(ResNeXtBlock,layer_list,num_classes,channels,groups=groups,width_per_group=width_per_group)  
 
 
 if __name__ =="__main__":
