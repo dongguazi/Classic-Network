@@ -5,7 +5,7 @@ import torch.nn.functional as F
 import numpy as np
 from torchsummary import summary
 
-
+  # SeNet get form ResNext :only modify the SELayer,other is the same . 
 class SELayer(nn.Module):
     def __init__(self,channel,reduction=16) -> None:
         super(SELayer,self).__init__()
@@ -22,7 +22,8 @@ class SELayer(nn.Module):
         x=self.globalAvgPool(x).view(b,c)
         x=self.fc(x).view(b,c,1,1)
         return  original_x*x
-   
+ #new version, 
+
 class SEBlock(nn.Module):
     expansion=4
     def __init__(self,in_channels,plane,down_sample=None,stride=1,reduction=16):
@@ -56,6 +57,8 @@ class SEBlock(nn.Module):
         x=self.relu(x)
         return x
 
+
+#old version,selayer and block togather
 # SeNet get form ResNet :only modify the Bottleneck,other is the same .
 class Bottleneck(nn.Module):
     expansion=4
@@ -223,7 +226,7 @@ def SeNet152(num_classes,channels=3):
 
 if __name__ =="__main__":
     input=torch.ones([2,3,224,224])
-    model=SeNet50(10)
+    model=SeNet152(10)
     # res=model(input)
     # print(res.shape)
     summary(model.to("cuda"),(3,224,224))
