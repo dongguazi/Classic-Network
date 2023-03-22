@@ -27,24 +27,45 @@ def _make_divisible(v, divisor, min_value=None):
         new_v += divisor
     return new_v
 
-class Inverted_Residual_Block(nn.Module):
-    def __init__(self,in_ch,out_ch,stride,width_ratio):
-        super(Inverted_Residual_Block,self).__init__()
+class SELayer(nn.Module):
+    def __init__(self,channel,reduction=16) -> None:
+        super(SELayer,self).__init__()
+        self.globalAvgPool=nn.AdaptiveAvgPool2d(1)
+        self.fc=nn.Sequential(
+            nn.Linear(channel,channel//reduction,bias=False),
+            nn.ReLU(inplace=True),
+            nn.Linear(channel//reduction,channel,bias=False),
+            nn.Sigmoid()
+        )
+    def forward(self,x):
+        b,c,_,_=x.size()
+        original_x=x
+        x=self.globalAvgPool(x).view(b,c)
+        x=self.fc(x).view(b,c,1,1)
+        return  original_x*x
+
+class Inverted_Residual_SE_Block(nn.Module):
+    def __init__(self,in_ch,out_ch,stride,expandSize, se, nl):
+        super(Inverted_Residual_SE_Block,self).__init__()
         #倒残差网络结构两个要点：详见MobileNetV2—_block图
         # 第一个：1x1conv升维，3x3conv Dwise，1x1conv降维
         # 第二个：判断res连接的条件是stride==1 and in_ch==out_ch
+        self.use_Hswish=True if nl==1 else False
+        self.use_SE=True if se==1 else False
 
-        hidden_ch=int(round(width_ratio*in_ch))        
+        self.hidden_ch=expandSize       
         self.res_connect= stride==1 and in_ch==out_ch
         layers=[]
-
+ 
+ 
         # if width_ratio!=1:
-        layers.append(conv_BNRelu(in_ch,hidden_ch,kernel_size=1))
-        layers.extend(
-            [conv_BNRelu(hidden_ch,hidden_ch,kernel_size=3, stride=stride,groups=hidden_ch),
-        nn.Conv2d(hidden_ch,out_ch,kernel_size=1,stride=1,padding=0,bias=False),
-        nn.BatchNorm2d(out_ch),]
-        )
+        layers.append(conv_BNRelu(in_ch,self.hidden_ch,kernel_size=1))
+        layers.append(conv_BNRelu(self.hidden_ch,self.hidden_ch,kernel_size=3, stride=stride,groups=self.hidden_ch))
+        if self.use_SE:
+            layers.append(SELayer(self.hidden_ch))
+        layers.append(nn.Conv2d(self.hidden_ch,out_ch,kernel_size=1,stride=1,padding=0,bias=False))
+        layers.append(nn.BatchNorm2d(out_ch))
+
         self.conv=nn.Sequential(*layers)
         # self.relu6= nn.ReLU6(inplace=True)
 
@@ -78,7 +99,7 @@ class MobileNetV2(nn.Module):
             #e：expand size；c：out size；
             #se：0(无)1(有se),nl:0(relu)1(Hswish);s:stride
             settingList = [
-                # e, c, se, nl，s
+                # expand, c, se, nl，s
                 [16, 16, 1, 0, 2],
                 [72, 24, 0, 0, 2],
                 [88, 24, 0, 0, 1],
@@ -89,12 +110,9 @@ class MobileNetV2(nn.Module):
                 [144, 48, 1, 1, 1],
                 [288, 96, 1, 1, 2],
                 [576, 96, 1, 1, 1],
-                [576, 96, 1, 1, 1],
-
-
-                [6, 320, 1, 1],
+                [576, 96, 1, 1, 1]
             ]
-        if len(settingList) == 0 or len(settingList[0]) != 4:
+        if len(settingList) == 0 or len(settingList[0]) != 5:
             raise ValueError("inverted_residual_setting should be non-empty "
                              "or a 4-element list, got {}".format(settingList))
         in_ch=_make_divisible(in_ch*width_ratio,round_nearest)
@@ -102,11 +120,13 @@ class MobileNetV2(nn.Module):
 
         layers=[]
         layers.append(conv_BNRelu(in_ch=3,out_ch=in_ch,kernel_size=3,stride=2))
-        for t,c,n,s in settingList:
+        for expand, ch, se, nl,s in settingList:
             out_ch=_make_divisible(c*width_ratio,round_nearest)
+
+
             for i in range(n):
                 stride=s if i==0 else 1
-                layers.append(Inverted_Residual_Block(in_ch,out_ch,stride,width_ratio))
+                layers.append(Inverted_Residual_SE_Block(in_ch,out_ch,stride,width_ratio))
                 in_ch=out_ch
         layers.append(conv_BNRelu(in_ch,self.last_ch,kernel_size=1,stride=1))
        
