@@ -30,7 +30,7 @@ def _make_divisible(v, divisor, min_value=None):
 class Inverted_Residual_Block(nn.Module):
     def __init__(self,in_ch,out_ch,stride,width_ratio):
         super(Inverted_Residual_Block,self).__init__()
-        #倒残差网络结构两个要点：
+        #倒残差网络结构两个要点：详见MobileNetV2—_block图
         # 第一个：1x1conv升维，3x3conv Dwise，1x1conv降维
         # 第二个：判断res连接的条件是stride==1 and in_ch==out_ch
 
@@ -72,7 +72,8 @@ class MobileNetV2(nn.Module):
         super(MobileNetV2,self).__init__()
         in_ch=32
         last_ch=1280
-        #按照论文的设置t, c, n, s
+        #width_ratio是倒残差网络宽度的倍率
+        # 按照论文的设置t, c, n, s
         if settingList is None:
             settingList = [
                 # t, c, n, s
