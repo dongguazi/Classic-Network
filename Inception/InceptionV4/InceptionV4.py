@@ -17,7 +17,8 @@ class BasicConv(nn.Module):
         x = self.conv(x)
         x = self.relu(x)
         return x
-#google net has three outputs.
+
+#expand the dim
 class Model_Expand(nn.Module):
     def __init__(self, in_channels, out_channels):
         super(Model_Expand, self).__init__()
@@ -32,8 +33,6 @@ class Model_Expand(nn.Module):
             BasicConv(in_channels=out_channels, out_channels=out_channels,kernel_size=3,stride=2)
         )
         self.branch_3 = nn.MaxPool2d(kernel_size=3, stride=2)
-
-
 
     def forward(self, x):
         x_1 = self.branch_1(x)
@@ -152,6 +151,7 @@ class InceptionBlockV3(nn.Module):
 class InceptionV1(nn.Module):
     def __init__(self,class_nums,in_ch=3) -> None:
         super(InceptionV1,self).__init__()
+        #input        
         self.conv1=BasicConv(in_ch,32,kernel_size=3, stride=2)
         self.conv2=BasicConv(32,32,kernel_size=3, stride=1)
         self.conv3=BasicConv(32,64,kernel_size=3, stride=1,padding=1)
@@ -159,26 +159,23 @@ class InceptionV1(nn.Module):
         self.conv4=BasicConv(64,80,kernel_size=3,stride=1)
         self.conv5=BasicConv(80,192,kernel_size=3,stride=2)
         self.conv6=BasicConv(192,288,kernel_size=3,stride=1,padding=1)
-
+        #block1
         self.InceptionA1=InceptionBlockV1(in_ch=288,out_maxpool=64)
         self.InceptionA2=InceptionBlockV1(in_ch=288,out_maxpool=64)
         self.InceptionA3=InceptionBlockV1(in_ch=288,out_maxpool=64)
         self.Expand1=Model_Expand(288,240)
-
-
+        #block2
         self.InceptionB1=InceptionBlockV2(in_ch=768,out_ch=768)
         self.InceptionB2=InceptionBlockV2(in_ch=768,out_ch=768)
         self.InceptionB3=InceptionBlockV2(in_ch=768,out_ch=768)
         self.InceptionB4=InceptionBlockV2(in_ch=768,out_ch=768)
         self.InceptionB5=InceptionBlockV2(in_ch=768,out_ch=768)
-
         self.Expand2=Model_Expand(768,256)
-
+        #block3
         self.InceptionC1=InceptionBlockV2(in_ch=1280,out_ch=1280)
         self.InceptionC2=InceptionBlockV2(in_ch=1280,out_ch=2048)
-
+        #classify
         self.pool2=nn.AdaptiveAvgPool2d(output_size=1)
-
         self.dropout=nn.Dropout2d(p=0.4,inplace=True)
         self.fc=nn.Conv2d(2048,class_nums,kernel_size=1)
         self.softmax=nn.Softmax(dim=1)
@@ -204,12 +201,10 @@ class InceptionV1(nn.Module):
         out=self.InceptionC1(out)
         out=self.InceptionC2(out)
         out=self.pool2(out)
-        out=self.dropout(out)
-        out=self.softmax(self.fc(out))
 
-        # out=self.dropout(out)
-        # out=self.fc(out)
-        # out=self.softmax(out)
+        out=self.dropout(out)
+        out=self.fc(out)
+        out=self.softmax(out)
         return out
 
 

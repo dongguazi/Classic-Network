@@ -5,13 +5,14 @@ import torch.nn.functional as F
 import numpy as np
 from torchsummary import summary
 import math
+
 def conv_block(in_channels,out_channels,kernel_size=3,stride=1,padding=0,bias=False):
     return nn.Sequential(
         nn.BatchNorm2d(in_channels),nn.ReLU(inplace=True),
         nn.Conv2d(in_channels,out_channels,kernel_size=kernel_size,stride=stride,padding=padding,bias=bias)
     )
 
-
+#create 1x1和3x3 block
 class BottleneckBlock(nn.Module):
     def __init__(self,in_channels,out_channels,dropRate) -> None:
         super(BottleneckBlock,self).__init__()    
@@ -34,8 +35,11 @@ class BottleneckBlock(nn.Module):
         out = self.conv2(self.relu(self.bn2(out)))
         # if self.dropRate>0:
         #     out=F.dropout(out,p=self.dropRate,inplace=False,training=self.training)
+        
+        #this is core key，connect x and new features
         return torch.cat([x,out],dim=1)
 
+#create inter block
 class TransitionBlock(nn.Module):
     def __init__(self,in_planes,out_plains,dropRate) -> None:
         super(TransitionBlock,self).__init__()
@@ -52,6 +56,7 @@ class TransitionBlock(nn.Module):
         out=self.avgploing(out)
         return out
 
+#create DenseBlock layer
 class DenseBlock(nn.Module):
     def __init__(self,layer_nums,in_channels,growth_rate,block,dropRate=0.0) -> None:
         super(DenseBlock,self).__init__()
@@ -101,7 +106,7 @@ class DenseNet(nn.Module):
         in_plains=out_plains
         self.block4=DenseBlock(nDenseBlock,in_plains,growth_rate,block,dropRate)
         in_plains=int(in_plains+nDenseBlock*growth_rate)
-        # # classifier
+        # classifier
         self.globgalavgpool=nn.AdaptiveAvgPool2d((1,1))
         self.bn1=nn.BatchNorm2d(in_plains)
         self.relu=nn.ReLU(inplace=True)

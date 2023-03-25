@@ -69,12 +69,6 @@ class InceptionV1(nn.Module):
         out=self.softmax(out)
         return out
 
-
-
-
-
-
-
 if __name__ =="__main__":
     input=torch.ones([2,3,224,224])
     # model=InceptionBlock(192,256,64,96,128,16,32,32)
