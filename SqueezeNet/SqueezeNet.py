@@ -58,20 +58,33 @@ class SqueezeNet(nn.Module):
         if self.bypass:
             x=self.maxpool1(self.relu1(self.conv1(x)))
             x=self.fire2(x)
-            # indentity=x
-            # x=indentity+self.fire3(x)
-            # x=self.fire4(x)
-            # x=self.maxpool2(x)
-            # indentity=x
-            # x=indentity+self.fire5(x)
-            # x=self.fire6(x)
-            # indentity=x
-            # x=indentity+self.fire7(x)
-            # x=self.fire8(x)
-            # x=self.maxpool3(x)
-            # indentity=x
-            # x=indentity+self.fire9(x)
-            # x=self.classify(x)
+            indentity=x
+            x=indentity+self.fire3(x)
+            x=self.fire4(x)
+            x=self.maxpool2(x)
+            indentity=x
+            x=indentity+self.fire5(x)
+            x=self.fire6(x)
+            indentity=x
+            x=indentity+self.fire7(x)
+            x=self.fire8(x)
+            x=self.maxpool3(x)
+            indentity=x
+            x=indentity+self.fire9(x)
+            x=self.classify(x)
+        else:
+            x=self.maxpool1(self.relu1(self.conv1(x)))
+            x=self.fire2(x)
+            x=self.fire3(x)
+            x=self.fire4(x)
+            x=self.maxpool2(x)
+            x=self.fire5(x)
+            x=self.fire6(x)
+            x=self.fire7(x)
+            x=self.fire8(x)
+            x=self.maxpool3(x)
+            x=self.fire9(x)
+            x=self.classify(x)
         return torch.flatten(x,1)
     
 
