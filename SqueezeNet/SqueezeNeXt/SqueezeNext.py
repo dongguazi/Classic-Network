@@ -45,13 +45,12 @@ class SqueezeNext(nn.Module):
         self.class_nums=class_nums
         channels=[64,32,64,128,256]
         depth=[6,6,8,1]
-        self.conv1=nn.Sequential(
+        self.input=nn.Sequential(
             nn.Conv2d(in_ch,channels[0],kernel_size=7,stride=2,padding=3),
             nn.MaxPool2d(kernel_size=3, stride=2),
             nn.BatchNorm2d(channels[0]),
             nn.ReLU(inplace=True)
         )
-
         self.stage1=self._make_stages(depth[0],channels[0],channels[1],stride=1)
         self.stage2=self._make_stages(depth[1],channels[1],channels[2],stride=2)
         self.stage3=self._make_stages(depth[2],channels[2],channels[3],stride=2)
@@ -71,7 +70,7 @@ class SqueezeNext(nn.Module):
                     nn.init.zeros_(m.bias)
 
     def forward(self,x):
-        x=self.conv1(x)
+        x=self.input(x)
         x=self.stage1(x)
         x=self.stage2(x)
         x=self.stage3(x)

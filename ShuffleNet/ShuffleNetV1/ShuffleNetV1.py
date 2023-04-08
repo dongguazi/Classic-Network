@@ -88,7 +88,7 @@ class ShufflenetV1(nn.Module):
         )
         self.maxpool=nn.MaxPool2d(kernel_size=3,stride=2,padding=3//2)
         features=[]
-        #you can build them on by one
+        #you can build them one by one
         for inx,repeateNums in enumerate(self.stage_repeats):
             out_ch=self.stage_out_ch[inx+2]
             for i in range(repeateNums):
@@ -106,7 +106,7 @@ class ShufflenetV1(nn.Module):
         x=self.features(x)
         x=self.globpool(x)
         x=self.classify(x)
-        
+
 if __name__=="__main__":
     input=torch.ones([2,3,224,224])
     model=ShufflenetV1(10)
