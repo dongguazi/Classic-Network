@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
 from torchsummary import summary
-
+#paper:https://openreview.net/pdf?id=q2ZaVU6bEsT
 class CAM(nn.Module):
     def __init__(self, inc, fusion='weight'):
         super().__init__()
