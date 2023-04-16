@@ -16,10 +16,11 @@ class SimAM(torch.nn.Module):
     def forward(self, x):
         b, c, h, w = x.size()
         n = w * h - 1
-        x_minus_mu_square = (x - x.mean(dim=[2, 3], keepdim=True)).pow(2)
-        # print(x_minus_mu_square.size()) #torch.Size([3, 64, 7, 7])
+        var = (x - x.mean(dim=[2, 3], keepdim=True)).pow(2)
+        # print(var.size()) #torch.Size([3, 64, 7, 7])
         # print(x.mean(dim=[2, 3], keepdim=True).size()) #torch.Size([3, 64, 1, 1])
-        y = x_minus_mu_square / (4 * (x_minus_mu_square.sum(dim=[2, 3], keepdim=True) / n + self.e_lambda)) + 0.5      
+        mean=var.sum(dim=[2, 3], keepdim=True) / n
+        y = var / (4 * (mean + self.e_lambda)) + 0.5      
         return x * self.activaton(y)
 
 if __name__=="__main__":
