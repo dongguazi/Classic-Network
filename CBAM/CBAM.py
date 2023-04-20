@@ -4,34 +4,7 @@ from torch.nn import init
 import torch.nn.functional as F
 import numpy as np
 from torchsummary import summary
-#paper:https://arxiv.org/pdf/1905.02188.pdf
-#using CARAFE with up-sample can improve accuracy by 2%
-class CBAM(nn.Module):
-    def __init__(self, in_ch,mid_ch=64,k_encode=3,k_upsample=5,scale=2):
-        super(CBAM,self).__init__()
-
-    def forward(self, x):
-
-        return x
-
-#Conv coming from org code of yolov5 
-class Conv(nn.Module):
-    # Standard convolution
-    def __init__(self, in_ch, out_ch, kernel_size=1, stride=1, padding=0, dilation=1,groups=1, relu=True,bn=True,bias=False):  # ch_in, ch_out, kernel, stride, padding, groups
-        super().__init__()
-        self.conv = nn.Conv2d(in_ch, out_ch,kernel_size= kernel_size, stride=stride, padding=padding,dilation=dilation, groups=groups, bias=bias)
-        self.bn = nn.BatchNorm2d(out_ch) if bn else None
-        self.relu = nn.ReLU() if relu else None
-    def forward(self, x):
-        x=self.conv(x)
-        if self.bn is not None:
-            x=self.bn(x)
-        if self.relu is not None:
-            x=self.relu(x)
-        return x
-class Flatten(nn.Module):
-      def forward(self, x):
-        return x.view(x.size(0),-1)
+#paper:https://arxiv.org/pdf/1807.06521.pdf
 
 class ChannelAttention(nn.Module):
     def __init__(self,in_ch,reducation=16) -> None:
